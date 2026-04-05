@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instant Promo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="app-header">
+      <div>
+        <h1>Instant Promo</h1>
+        <p>Napravi promo vizual za proizvod bez dizajnera.</p>
+      </div>
+      <button id="resetBtn" class="ghost-btn" type="button">Reset</button>
+    </header>
+
+    <main class="app-layout">
+      <section class="panel controls-panel">
+        <div class="section-title">
+          <h2>Podešavanja</h2>
+          <span>MVP</span>
+        </div>
+
+        <div class="field">
+          <label for="productImage">Slika proizvoda <span>*</span></label>
+          <label class="upload-box" for="productImage">
+            <input id="productImage" type="file" accept="image/*" />
+            <div class="upload-inner">
+              <div class="upload-icon">⬆</div>
+              <div class="upload-text">
+                <strong>Upload slike</strong>
+                <small>PNG, JPG, WEBP</small>
+              </div>
+            </div>
+          </label>
+
+          <div id="imageThumbWrap" class="thumb-wrap hidden">
+            <img id="imageThumb" alt="Product preview" />
+          </div>
+
+          <div class="inline-actions">
+            <button id="removeBgBtn" class="secondary-btn" type="button" disabled>
+              Remove background
+            </button>
+          </div>
+
+          <div id="removeBgNote" class="helper-note">
+            Prvo učitaj sliku proizvoda. Remove background radi direktno u browseru.
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="logoImage">Logo / watermark</label>
+          <label class="upload-box upload-box-small" for="logoImage">
+            <input id="logoImage" type="file" accept="image/*" />
+            <div class="upload-inner">
+              <div class="upload-text">
+                <strong>Upload logotipa</strong>
+              </div>
+            </div>
+          </label>
+          <div id="logoThumbWrap" class="thumb-wrap thumb-small hidden">
+            <img id="logoThumb" alt="Logo preview" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="productName">Naziv / kratak opis <span>*</span></label>
+          <input
+            id="productName"
+            type="text"
+            maxlength="70"
+            placeholder="npr. Vitamin C 1000mg + imunitet / 20 tableta"
+          />
+          <div class="counter"><span id="nameCount">0</span>/70</div>
+        </div>
+
+        <div class="field-grid two-cols">
+          <div class="field no-margin">
+            <label for="price">Nova cena <span>*</span></label>
+            <input
+              id="price"
+              type="text"
+              maxlength="15"
+              placeholder="npr. 699 RSD"
+            />
+          </div>
+          <div class="field no-margin">
+            <label for="oldPrice">Stara cena</label>
+            <input
+              id="oldPrice"
+              type="text"
+              maxlength="15"
+              placeholder="npr. 899 RSD"
+            />
+          </div>
+        </div>
+
+        <div class="field-grid two-cols">
+          <div class="field no-margin">
+            <label for="badge">Badge</label>
+            <select id="badge">
+              <option value="">Bez badge-a</option>
+              <option value="AKCIJA">AKCIJA</option>
+              <option value="HIT">HIT</option>
+              <option value="NOVO">NOVO</option>
+              <option value="POPUST">POPUST</option>
+              <option value="LIMITED">LIMITED</option>
+              <option value="custom">Custom...</option>
+            </select>
+          </div>
+          <div class="field no-margin">
+            <label for="customBadge">Custom badge</label>
+            <input
+              id="customBadge"
+              type="text"
+              maxlength="18"
+              placeholder="npr. -20%"
+              disabled
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Vizualni stil</label>
+          <div class="segmented" id="styleSelector">
+            <button class="seg-btn active" type="button" data-style="clean">
+              <span>Clean</span>
+              <small>Svetao & uredan</small>
+            </button>
+            <button class="seg-btn" type="button" data-style="bold">
+              <span>Bold</span>
+              <small>Akcija & kontrast</small>
+            </button>
+            <button class="seg-btn" type="button" data-style="dark">
+              <span>Dark</span>
+              <small>Premium & fokus</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Varijanta stila</label>
+          <div class="segmented compact variant-selector" id="variantSelector"></div>
+        </div>
+
+        <div class="field">
+          <label>Format</label>
+          <div class="segmented compact" id="formatSelector">
+            <button class="seg-btn active" type="button" data-format="square">
+              <span>1:1</span>
+              <small>1080×1080</small>
+            </button>
+            <button class="seg-btn" type="button" data-format="portrait">
+              <span>3:4</span>
+              <small>1080×1350</small>
+            </button>
+            <button class="seg-btn" type="button" data-format="story">
+              <span>9:16</span>
+              <small>1080×1920</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="generateBtn" class="primary-btn" type="button">Generate</button>
+          <button id="downloadBtn" class="secondary-btn" type="button" disabled>
+            Download PNG
+          </button>
+        </div>
+
+        <div id="statusMsg" class="status-msg">
+          Upload slike i unesi naziv i cenu za generisanje.
+        </div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="preview-head">
+          <div>
+            <h2>Preview</h2>
+            <p id="previewMeta">Square 1:1 — 1080×1080</p>
+          </div>
+        </div>
+
+        <div class="preview-stage">
+          <canvas id="promoCanvas" width="1080" height="1080"></canvas>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
