@@ -17,7 +17,6 @@ const removeBgBtn = document.getElementById("removeBgBtn");
 const previewMeta = document.getElementById("previewMeta");
 const statusMsg = document.getElementById("statusMsg");
 const nameCount = document.getElementById("nameCount");
-const removeBgNote = document.getElementById("removeBgNote");
 
 const imageThumbWrap = document.getElementById("imageThumbWrap");
 const imageThumb = document.getElementById("imageThumb");
@@ -42,6 +41,13 @@ const formatMap = {
   square: { width: 1080, height: 1080, label: "Square 1:1 — 1080×1080" },
   portrait: { width: 1080, height: 1350, label: "Portrait 3:4 — 1080×1350" },
   story: { width: 1080, height: 1920, label: "Story 9:16 — 1080×1920" }
+};
+
+// HARD-CODED MVP VARIANTS
+const hardcodedVariants = {
+  clean: "pharmacy",
+  bold: "discount",
+  dark: "clinical"
 };
 
 initBackgroundRemoval();
@@ -83,18 +89,9 @@ formatSelector.addEventListener("click", (e) => {
 generateBtn.addEventListener("click", generateVisual);
 downloadBtn.addEventListener("click", downloadVisual);
 resetBtn.addEventListener("click", resetApp);
-removeBgBtn.addEventListener("click", removeBackgroundFromProduct);
 
-function updateRemoveBgUi() {
-  removeBgBtn.disabled = !(bgReady && originalProductFile);
-
-  if (!bgReady) {
-    removeBgNote.textContent = "Background removal se učitava… ako potraje, osveži stranicu i sačekaj par sekundi.";
-  } else if (!originalProductFile) {
-    removeBgNote.textContent = "Prvo učitaj sliku proizvoda.";
-  } else {
-    removeBgNote.textContent = "Klikni na Remove background. Prvi put obrada može trajati malo duže.";
-  }
+if (removeBgBtn) {
+  removeBgBtn.addEventListener("click", removeBackgroundFromProduct);
 }
 
 async function initBackgroundRemoval() {
@@ -111,7 +108,13 @@ async function initBackgroundRemoval() {
   }
 }
 
+function updateRemoveBgUi() {
+  if (!removeBgBtn) return;
+  removeBgBtn.disabled = !(bgReady && originalProductFile);
+}
+
 function updateSegmentedState(container, type, value) {
+  if (!container) return;
   const attr = type === "style" ? "data-style" : "data-format";
   [...container.querySelectorAll(".seg-btn")].forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute(attr) === value);
@@ -219,8 +222,10 @@ async function removeBackgroundFromProduct() {
     console.error("Remove background error:", error);
     statusMsg.textContent = "Remove background nije uspeo za ovu sliku. Probaj drugu sliku sa jasnijim proizvodom.";
   } finally {
-    removeBgBtn.classList.remove("loading");
-    removeBgBtn.textContent = "Remove background";
+    if (removeBgBtn) {
+      removeBgBtn.classList.remove("loading");
+      removeBgBtn.textContent = "Remove background";
+    }
     updateRemoveBgUi();
   }
 }
@@ -252,7 +257,7 @@ function generateVisual() {
     badge
   });
 
-  statusMsg.textContent = "Vizual generisan.";
+  statusMsg.textContent = `Vizual generisan. Aktivni stil: ${selectedStyle} / ${hardcodedVariants[selectedStyle]}`;
   downloadBtn.disabled = false;
 }
 
@@ -301,8 +306,12 @@ function resetApp() {
   updateSegmentedState(formatSelector, "format", selectedFormat);
 
   nameCount.textContent = "0";
-  removeBgBtn.classList.remove("loading");
-  removeBgBtn.textContent = "Remove background";
+
+  if (removeBgBtn) {
+    removeBgBtn.classList.remove("loading");
+    removeBgBtn.textContent = "Remove background";
+  }
+
   updateRemoveBgUi();
 
   applyCanvasSize();
@@ -345,82 +354,230 @@ function splitPriceAndCurrency(priceText) {
   };
 }
 
-function getTheme(style) {
-  if (style === "bold") {
-    return {
-      gradientTop: "#ff3d54",
-      gradientMiddle: "#ff6a3d",
-      gradientBottom: "#ff9a00",
-      spotlightColor: "rgba(255,255,255,0.24)",
-      spotlightScale: 0.52,
-      cardFill: "rgba(255,255,255,0.10)",
-      cardStroke: "rgba(255,255,255,0)",
-      text: "#ffffff",
-      muted: "rgba(255,255,255,0.84)",
-      titleFont: '"Poppins", Arial, Helvetica, sans-serif',
-      priceFont: '"Poppins", Arial, Helvetica, sans-serif',
-      oldPriceText: "rgba(255,255,255,0.94)",
-      oldPriceLine: "#ffffff",
-      priceFill: "#fff6f8",
-      priceText: "#d90452",
-      badgeStyle: "bold",
-      badgeFill: "#f8ea24",
-      badgeFill2: "#ffe948",
-      badgeText: "#121212",
-      badgeShadow: "rgba(0,0,0,0.20)",
-      badgeHighlight: "rgba(255,255,255,0.24)"
-    };
-  }
+function getVariantForStyle(style) {
+  return hardcodedVariants[style] || "retail";
+}
 
-  if (style === "dark") {
-    return {
-      gradientTop: "#161b24",
-      gradientMiddle: "#121821",
-      gradientBottom: "#0b1017",
-      spotlightColor: "rgba(255,255,255,0.34)",
-      spotlightScale: 0.62,
-      cardFill: "rgba(255,255,255,0.045)",
-      cardStroke: "rgba(255,255,255,0.08)",
-      text: "#ffffff",
-      muted: "rgba(255,255,255,0.76)",
-      titleFont: 'Arial, Helvetica, sans-serif',
-      priceFont: 'Arial, Helvetica, sans-serif',
-      oldPriceText: "rgba(255,255,255,0.84)",
-      oldPriceLine: "rgba(255,255,255,0.92)",
-      priceFill: "#f8f6ef",
-      priceText: "#14171f",
-      badgeStyle: "dark",
-      badgeFill: "#d8b46a",
-      badgeFill2: "#f3dfab",
-      badgeText: "#2e2412",
-      badgeShadow: "rgba(0,0,0,0.28)",
-      badgeHighlight: "rgba(255,255,255,0.28)"
-    };
-  }
+function getTheme(style, variant) {
+  const themes = {
+    clean: {
+      retail: {
+        gradientTop: "#ffffff",
+        gradientMiddle: "#f6f9ff",
+        gradientBottom: "#eef4ff",
+        spotlightColor: "rgba(124,108,242,0.10)",
+        spotlightScale: 0.42,
+        cardFill: "rgba(255,255,255,0.82)",
+        cardStroke: "rgba(255,255,255,0.78)",
+        text: "#111827",
+        titleFont: 'Arial, Helvetica, sans-serif',
+        priceFont: 'Arial, Helvetica, sans-serif',
+        oldPriceText: "#606a78",
+        oldPriceLine: "#9da6b2",
+        priceFill: "#ffffff",
+        priceText: "#ef4444",
+        badgeStyle: "clean3d",
+        badgeFill: "#ef4444",
+        badgeFill2: "#ff6a5c",
+        badgeText: "#ffffff",
+        badgeShadow: "rgba(167, 24, 24, 0.28)",
+        badgeHighlight: "rgba(255,255,255,0.22)",
+        texture: "none"
+      },
+      pharmacy: {
+        gradientTop: "#fbfdff",
+        gradientMiddle: "#f4f9ff",
+        gradientBottom: "#ebf4ff",
+        spotlightColor: "rgba(255,255,255,0.62)",
+        spotlightScale: 0.50,
+        cardFill: "rgba(255,255,255,0.88)",
+        cardStroke: "rgba(215,228,245,0.82)",
+        text: "#1e293b",
+        titleFont: 'Arial, Helvetica, sans-serif',
+        priceFont: 'Arial, Helvetica, sans-serif',
+        oldPriceText: "#6b7a8d",
+        oldPriceLine: "#9eb0c6",
+        priceFill: "#ffffff",
+        priceText: "#e53935",
+        badgeStyle: "cleanFlat",
+        badgeFill: "#e53935",
+        badgeFill2: "#ef5350",
+        badgeText: "#ffffff",
+        badgeShadow: "rgba(177, 36, 36, 0.18)",
+        badgeHighlight: "rgba(255,255,255,0.16)",
+        texture: "microdotsBlue"
+      },
+      fresh: {
+        gradientTop: "#fbfffd",
+        gradientMiddle: "#f2fff8",
+        gradientBottom: "#e6fff4",
+        spotlightColor: "rgba(255,255,255,0.36)",
+        spotlightScale: 0.46,
+        cardFill: "rgba(255,255,255,0.84)",
+        cardStroke: "rgba(221,245,235,0.88)",
+        text: "#064e3b",
+        titleFont: 'Arial, Helvetica, sans-serif',
+        priceFont: 'Arial, Helvetica, sans-serif',
+        oldPriceText: "#5b7a70",
+        oldPriceLine: "#8ab3a3",
+        priceFill: "#ffffff",
+        priceText: "#10b981",
+        badgeStyle: "clean3d",
+        badgeFill: "#10b981",
+        badgeFill2: "#34d399",
+        badgeText: "#ffffff",
+        badgeShadow: "rgba(16, 130, 97, 0.22)",
+        badgeHighlight: "rgba(255,255,255,0.20)",
+        texture: "grainSoft"
+      }
+    },
 
-  return {
-    gradientTop: "#ffffff",
-    gradientMiddle: "#f6f9ff",
-    gradientBottom: "#eef4ff",
-    spotlightColor: "rgba(124,108,242,0.10)",
-    spotlightScale: 0.42,
-    cardFill: "rgba(255,255,255,0.82)",
-    cardStroke: "rgba(255,255,255,0.78)",
-    text: "#111827",
-    muted: "#5f6b7a",
-    titleFont: 'Arial, Helvetica, sans-serif',
-    priceFont: 'Arial, Helvetica, sans-serif',
-    oldPriceText: "#606a78",
-    oldPriceLine: "#9da6b2",
-    priceFill: "#ffffff",
-    priceText: "#ef4444",
-    badgeStyle: "clean",
-    badgeFill: "#ef4444",
-    badgeFill2: "#ff6a5c",
-    badgeText: "#ffffff",
-    badgeShadow: "rgba(167, 24, 24, 0.28)",
-    badgeHighlight: "rgba(255,255,255,0.22)"
+    bold: {
+      promo: {
+        gradientTop: "#ff3d54",
+        gradientMiddle: "#ff6a3d",
+        gradientBottom: "#ff9a00",
+        spotlightColor: "rgba(255,255,255,0.24)",
+        spotlightScale: 0.52,
+        cardFill: "rgba(255,255,255,0.10)",
+        cardStroke: "rgba(255,255,255,0)",
+        text: "#ffffff",
+        titleFont: '"Poppins", Arial, Helvetica, sans-serif',
+        priceFont: '"Poppins", Arial, Helvetica, sans-serif',
+        oldPriceText: "rgba(255,255,255,0.94)",
+        oldPriceLine: "#ffffff",
+        priceFill: "#fff6f8",
+        priceText: "#d90452",
+        badgeStyle: "bold",
+        badgeFill: "#f8ea24",
+        badgeFill2: "#ffe948",
+        badgeText: "#121212",
+        badgeShadow: "rgba(0,0,0,0.20)",
+        badgeHighlight: "rgba(255,255,255,0.24)",
+        texture: "none"
+      },
+      discount: {
+        gradientTop: "#ff233c",
+        gradientMiddle: "#ff5d2a",
+        gradientBottom: "#ffd000",
+        spotlightColor: "rgba(255,255,255,0.30)",
+        spotlightScale: 0.56,
+        cardFill: "rgba(255,255,255,0.10)",
+        cardStroke: "rgba(255,255,255,0)",
+        text: "#ffffff",
+        titleFont: '"Poppins", Arial, Helvetica, sans-serif',
+        priceFont: '"Poppins", Arial, Helvetica, sans-serif',
+        oldPriceText: "rgba(255,255,255,0.96)",
+        oldPriceLine: "#ffffff",
+        priceFill: "#fff8f8",
+        priceText: "#d90429",
+        badgeStyle: "boldBig",
+        badgeFill: "#ffe500",
+        badgeFill2: "#fff17a",
+        badgeText: "#111111",
+        badgeShadow: "rgba(0,0,0,0.24)",
+        badgeHighlight: "rgba(255,255,255,0.26)",
+        texture: "grainPromo"
+      },
+      pharmacypromo: {
+        gradientTop: "#fff1f2",
+        gradientMiddle: "#ffd9db",
+        gradientBottom: "#ffc9cc",
+        spotlightColor: "rgba(255,255,255,0.42)",
+        spotlightScale: 0.44,
+        cardFill: "rgba(255,255,255,0.68)",
+        cardStroke: "rgba(255,255,255,0.40)",
+        text: "#3a2020",
+        titleFont: '"Poppins", Arial, Helvetica, sans-serif',
+        priceFont: '"Poppins", Arial, Helvetica, sans-serif',
+        oldPriceText: "#774a4a",
+        oldPriceLine: "#a86565",
+        priceFill: "#ffffff",
+        priceText: "#d62828",
+        badgeStyle: "cleanFlat",
+        badgeFill: "#d62828",
+        badgeFill2: "#ef5350",
+        badgeText: "#ffffff",
+        badgeShadow: "rgba(130, 35, 35, 0.18)",
+        badgeHighlight: "rgba(255,255,255,0.14)",
+        texture: "none"
+      }
+    },
+
+    dark: {
+      premium: {
+        gradientTop: "#161b24",
+        gradientMiddle: "#121821",
+        gradientBottom: "#0b1017",
+        spotlightColor: "rgba(255,255,255,0.22)",
+        spotlightScale: 0.54,
+        cardFill: "rgba(255,255,255,0.045)",
+        cardStroke: "rgba(255,255,255,0.08)",
+        text: "#ffffff",
+        titleFont: 'Arial, Helvetica, sans-serif',
+        priceFont: 'Arial, Helvetica, sans-serif',
+        oldPriceText: "rgba(255,255,255,0.84)",
+        oldPriceLine: "rgba(255,255,255,0.92)",
+        priceFill: "#f8f6ef",
+        priceText: "#14171f",
+        badgeStyle: "darkSubtle",
+        badgeFill: "#707887",
+        badgeFill2: "#9da5b1",
+        badgeText: "#ffffff",
+        badgeShadow: "rgba(0,0,0,0.28)",
+        badgeHighlight: "rgba(255,255,255,0.14)",
+        texture: "none"
+      },
+      luxegold: {
+        gradientTop: "#12151b",
+        gradientMiddle: "#0f1218",
+        gradientBottom: "#080a0e",
+        spotlightColor: "rgba(255,244,210,0.24)",
+        spotlightScale: 0.60,
+        cardFill: "rgba(255,255,255,0.04)",
+        cardStroke: "rgba(255,255,255,0.07)",
+        text: "#ffffff",
+        titleFont: 'Arial, Helvetica, sans-serif',
+        priceFont: 'Arial, Helvetica, sans-serif',
+        oldPriceText: "rgba(255,255,255,0.82)",
+        oldPriceLine: "rgba(255,255,255,0.88)",
+        priceFill: "#f8f2e6",
+        priceText: "#17140d",
+        badgeStyle: "gold",
+        badgeFill: "#d4af37",
+        badgeFill2: "#f2df9c",
+        badgeText: "#2a220f",
+        badgeShadow: "rgba(0,0,0,0.32)",
+        badgeHighlight: "rgba(255,255,255,0.26)",
+        texture: "grainLuxury"
+      },
+      clinical: {
+        gradientTop: "#0f172a",
+        gradientMiddle: "#111c35",
+        gradientBottom: "#0a1426",
+        spotlightColor: "rgba(255,255,255,0.34)",
+        spotlightScale: 0.62,
+        cardFill: "rgba(255,255,255,0.05)",
+        cardStroke: "rgba(255,255,255,0.08)",
+        text: "#ffffff",
+        titleFont: 'Arial, Helvetica, sans-serif',
+        priceFont: 'Arial, Helvetica, sans-serif',
+        oldPriceText: "rgba(214,225,241,0.88)",
+        oldPriceLine: "rgba(214,225,241,0.94)",
+        priceFill: "#f7fbff",
+        priceText: "#11213c",
+        badgeStyle: "clinical",
+        badgeFill: "#eef4ff",
+        badgeFill2: "#ffffff",
+        badgeText: "#20324f",
+        badgeShadow: "rgba(0,0,0,0.18)",
+        badgeHighlight: "rgba(255,255,255,0.30)",
+        texture: "microgridClinical"
+      }
+    }
   };
+
+  return themes[style]?.[variant] || themes.clean.retail;
 }
 
 function setCanvasFont(weight, size, family) {
@@ -457,8 +614,11 @@ function drawComposition({ name, price, oldPrice, badge }) {
   const { width, height } = formatMap[selectedFormat];
   ctx.clearRect(0, 0, width, height);
 
-  const theme = getTheme(selectedStyle);
+  const variant = getVariantForStyle(selectedStyle);
+  const theme = getTheme(selectedStyle, variant);
+
   drawBackground(width, height, theme);
+  drawTexture(width, height, theme);
   drawCard(width, height, theme);
 
   const layout = getLayout(width, height);
@@ -507,6 +667,77 @@ function drawBackground(width, height, theme) {
 
   ctx.fillStyle = spotlight;
   ctx.fillRect(0, 0, width, height);
+}
+
+function drawTexture(width, height, theme) {
+  if (theme.texture === "none") return;
+
+  ctx.save();
+
+  if (theme.texture === "microdotsBlue") {
+    ctx.fillStyle = "rgba(80,120,180,0.06)";
+    const step = Math.max(24, Math.floor(width / 36));
+    const radius = Math.max(1.3, width * 0.0016);
+    for (let y = step; y < height; y += step) {
+      for (let x = step; x < width; x += step) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  if (theme.texture === "grainSoft") {
+    for (let i = 0; i < 1200; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const a = Math.random() * 0.035;
+      ctx.fillStyle = `rgba(16,185,129,${a})`;
+      ctx.fillRect(x, y, 1.2, 1.2);
+    }
+  }
+
+  if (theme.texture === "grainPromo") {
+    for (let i = 0; i < 1600; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const a = Math.random() * 0.05;
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.fillRect(x, y, 1.4, 1.4);
+    }
+  }
+
+  if (theme.texture === "grainLuxury") {
+    for (let i = 0; i < 1100; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const a = Math.random() * 0.03;
+      ctx.fillStyle = `rgba(212,175,55,${a})`;
+      ctx.fillRect(x, y, 1.2, 1.2);
+    }
+  }
+
+  if (theme.texture === "microgridClinical") {
+    ctx.strokeStyle = "rgba(255,255,255,0.035)";
+    ctx.lineWidth = 1;
+    const step = Math.max(34, Math.floor(width / 26));
+
+    for (let x = 0; x < width; x += step) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+
+    for (let y = 0; y < height; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
 }
 
 function drawCard(width, height, theme) {
@@ -599,37 +830,63 @@ function getLayout(width, height) {
 }
 
 function drawBadge(x, y, w, h, text, theme) {
-  if (theme.badgeStyle === "dark") {
+  if (theme.badgeStyle === "gold") {
     drawPremiumBadge(x, y, w, h, text, theme);
+    return;
+  }
+
+  if (theme.badgeStyle === "clinical") {
+    drawClinicalBadge(x, y, w, h, text, theme);
     return;
   }
 
   ctx.save();
   ctx.translate(x + w / 2, y + h / 2);
 
-  const angle = theme.badgeStyle === "bold" ? (-3 * Math.PI) / 180 : (-2 * Math.PI) / 180;
+  const angle =
+    theme.badgeStyle === "bold" || theme.badgeStyle === "boldBig"
+      ? (-3 * Math.PI) / 180
+      : theme.badgeStyle === "clean3d"
+        ? (-2 * Math.PI) / 180
+        : 0;
+
   ctx.rotate(angle);
 
   ctx.shadowColor = theme.badgeShadow;
-  ctx.shadowBlur = theme.badgeStyle === "clean" ? 14 : 18;
-  ctx.shadowOffsetY = theme.badgeStyle === "clean" ? 8 : 10;
+  ctx.shadowBlur = theme.badgeStyle === "boldBig" ? 22 : theme.badgeStyle === "clean3d" ? 14 : 10;
+  ctx.shadowOffsetY = theme.badgeStyle === "boldBig" ? 12 : 8;
 
   const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
   grad.addColorStop(0, theme.badgeFill2);
   grad.addColorStop(1, theme.badgeFill);
   ctx.fillStyle = grad;
-  roundRect(ctx, -w / 2, -h / 2, w, h, h / 2, true, false);
+
+  const radius =
+    theme.badgeStyle === "cleanFlat" ? Math.round(h * 0.42) :
+    theme.badgeStyle === "boldBig" ? Math.round(h * 0.52) :
+    Math.round(h * 0.50);
+
+  roundRect(ctx, -w / 2, -h / 2, w, h, radius, true, false);
 
   ctx.shadowColor = "transparent";
   ctx.fillStyle = theme.badgeHighlight;
-  roundRect(ctx, -w / 2 + 10, -h / 2 + 8, w - 20, h * 0.34, h / 3, true, false);
+  roundRect(ctx, -w / 2 + 10, -h / 2 + 8, w - 20, h * 0.34, Math.round(h * 0.24), true, false);
 
   ctx.fillStyle = theme.badgeText;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const startSize = theme.badgeStyle === "clean" ? Math.floor(h * 0.34) : Math.floor(h * 0.38);
-  const fontFamily = theme.badgeStyle === "bold" ? '"Poppins", Arial, Helvetica, sans-serif' : 'Arial, Helvetica, sans-serif';
-  fitTextCenterWithFamily(text.toUpperCase(), 0, 4, w - 40, startSize, 20, 900, fontFamily);
+
+  const fontFamily =
+    theme.badgeStyle === "bold" || theme.badgeStyle === "boldBig"
+      ? '"Poppins", Arial, Helvetica, sans-serif'
+      : 'Arial, Helvetica, sans-serif';
+
+  const startSize =
+    theme.badgeStyle === "boldBig"
+      ? Math.floor(h * 0.42)
+      : Math.floor(h * 0.36);
+
+  fitTextCenterWithFamily(text.toUpperCase(), 0, 4, w - 36, startSize, 20, 900, fontFamily);
 
   ctx.restore();
 }
@@ -662,6 +919,34 @@ function drawPremiumBadge(x, y, w, h, text, theme) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   fitTextCenterWithFamily(text.toUpperCase(), 0, 2, w - 40, Math.floor(h * 0.34), 20, 900, 'Arial, Helvetica, sans-serif');
+
+  ctx.restore();
+}
+
+function drawClinicalBadge(x, y, w, h, text, theme) {
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+
+  ctx.shadowColor = theme.badgeShadow;
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 8;
+
+  const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+  grad.addColorStop(0, theme.badgeFill2);
+  grad.addColorStop(1, theme.badgeFill);
+  ctx.fillStyle = grad;
+
+  roundRect(ctx, -w / 2, -h / 2, w, h, Math.round(h * 0.28), true, false);
+
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(170,190,220,0.42)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, -w / 2 + 2, -h / 2 + 2, w - 4, h - 4, Math.round(h * 0.26), false, true);
+
+  ctx.fillStyle = theme.badgeText;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  fitTextCenterWithFamily(text.toUpperCase(), 0, 2, w - 40, Math.floor(h * 0.33), 20, 900, 'Arial, Helvetica, sans-serif');
 
   ctx.restore();
 }
