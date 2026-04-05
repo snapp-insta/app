@@ -55,7 +55,7 @@ const variantMap = {
   ],
   dark: [
     { value: "premium", label: "Premium" },
-    { value: "luxegold", label: "Gold" },
+    { value: "gold", label: "Gold" },
     { value: "clinical", label: "Clinical" }
   ]
 };
@@ -157,10 +157,10 @@ function renderVariantButtons() {
   variantSelector.innerHTML = "";
   const variants = variantMap[selectedStyle];
 
-  variants.forEach((variant, index) => {
+  variants.forEach((variant) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `seg-btn${variant.value === selectedVariant || (index === 0 && !selectedVariant) ? " active" : ""}`;
+    button.className = `seg-btn${variant.value === selectedVariant ? " active" : ""}`;
     button.setAttribute("data-variant", variant.value);
     button.innerHTML = `<span>${variant.label}</span><small>${getVariantHint(selectedStyle, variant.value)}</small>`;
 
@@ -186,8 +186,8 @@ function getVariantHint(style, variant) {
       pharmacypromo: "Urednija akcija"
     },
     dark: {
-      premium: "Subtle premium",
-      luxegold: "Gold spotlight",
+      premium: "Tih premium",
+      gold: "Gold spotlight",
       clinical: "Med-tech dark"
     }
   };
@@ -445,9 +445,9 @@ function getTheme(style, variant) {
     clean: {
       retail: {
         gradientTop: "#ffffff",
-        gradientMiddle: "#f6f9ff",
-        gradientBottom: "#eef4ff",
-        spotlightColor: "rgba(124,108,242,0.10)",
+        gradientMiddle: "#f5f7fb",
+        gradientBottom: "#eef1f6",
+        spotlightColor: "rgba(255,255,255,0.30)",
         spotlightScale: 0.42,
         cardFill: "rgba(255,255,255,0.82)",
         cardStroke: "rgba(255,255,255,0.78)",
@@ -467,37 +467,37 @@ function getTheme(style, variant) {
         texture: "none"
       },
       pharmacy: {
-        gradientTop: "#fbfdff",
-        gradientMiddle: "#f4f9ff",
-        gradientBottom: "#ebf4ff",
-        spotlightColor: "rgba(255,255,255,0.62)",
-        spotlightScale: 0.50,
-        cardFill: "rgba(255,255,255,0.90)",
-        cardStroke: "rgba(215,228,245,0.82)",
-        text: "#1e293b",
+        gradientTop: "#ffffff",
+        gradientMiddle: "#f2f8ff",
+        gradientBottom: "#e8f2fb",
+        spotlightColor: "rgba(255,255,255,0.74)",
+        spotlightScale: 0.52,
+        cardFill: "rgba(255,255,255,0.92)",
+        cardStroke: "rgba(205,221,240,0.88)",
+        text: "#1f365c",
         titleFont: 'Arial, Helvetica, sans-serif',
         priceFont: 'Arial, Helvetica, sans-serif',
-        oldPriceText: "#6b7a8d",
-        oldPriceLine: "#9eb0c6",
+        oldPriceText: "#6c809b",
+        oldPriceLine: "#98aac1",
         priceFill: "#ffffff",
-        priceText: "#e53935",
-        badgeStyle: "cleanFlat",
-        badgeFill: "#e53935",
-        badgeFill2: "#ef5350",
+        priceText: "#d62828",
+        badgeStyle: "pharmacyFlat",
+        badgeFill: "#d62828",
+        badgeFill2: "#e34b4b",
         badgeText: "#ffffff",
-        badgeShadow: "rgba(177, 36, 36, 0.18)",
-        badgeHighlight: "rgba(255,255,255,0.16)",
-        texture: "microdotsBlue"
+        badgeShadow: "rgba(140, 35, 35, 0.14)",
+        badgeHighlight: "rgba(255,255,255,0.12)",
+        texture: "clinicalDots"
       },
       fresh: {
         gradientTop: "#fbfffd",
         gradientMiddle: "#f2fff8",
         gradientBottom: "#e6fff4",
-        spotlightColor: "rgba(255,255,255,0.36)",
+        spotlightColor: "rgba(255,255,255,0.40)",
         spotlightScale: 0.46,
         cardFill: "rgba(255,255,255,0.84)",
         cardStroke: "rgba(221,245,235,0.88)",
-        text: "#064e3b",
+        text: "#065f46",
         titleFont: 'Arial, Helvetica, sans-serif',
         priceFont: 'Arial, Helvetica, sans-serif',
         oldPriceText: "#5b7a70",
@@ -539,11 +539,11 @@ function getTheme(style, variant) {
         texture: "none"
       },
       discount: {
-        gradientTop: "#ff233c",
-        gradientMiddle: "#ff5d2a",
+        gradientTop: "#ff1f3d",
+        gradientMiddle: "#ff4d2a",
         gradientBottom: "#ffd000",
-        spotlightColor: "rgba(255,255,255,0.30)",
-        spotlightScale: 0.56,
+        spotlightColor: "rgba(255,255,255,0.32)",
+        spotlightScale: 0.57,
         cardFill: "rgba(255,255,255,0.10)",
         cardStroke: "rgba(255,255,255,0)",
         text: "#ffffff",
@@ -554,8 +554,8 @@ function getTheme(style, variant) {
         priceFill: "#fff8f8",
         priceText: "#d90429",
         badgeStyle: "boldBig",
-        badgeFill: "#ffe500",
-        badgeFill2: "#fff17a",
+        badgeFill: "#fff200",
+        badgeFill2: "#fff98d",
         badgeText: "#111111",
         badgeShadow: "rgba(0,0,0,0.24)",
         badgeHighlight: "rgba(255,255,255,0.26)",
@@ -567,7 +567,7 @@ function getTheme(style, variant) {
         gradientBottom: "#ffc9cc",
         spotlightColor: "rgba(255,255,255,0.42)",
         spotlightScale: 0.44,
-        cardFill: "rgba(255,255,255,0.68)",
+        cardFill: "rgba(255,255,255,0.70)",
         cardStroke: "rgba(255,255,255,0.40)",
         text: "#3a2020",
         titleFont: '"Poppins", Arial, Helvetica, sans-serif',
@@ -576,7 +576,7 @@ function getTheme(style, variant) {
         oldPriceLine: "#a86565",
         priceFill: "#ffffff",
         priceText: "#d62828",
-        badgeStyle: "cleanFlat",
+        badgeStyle: "pharmacyFlat",
         badgeFill: "#d62828",
         badgeFill2: "#ef5350",
         badgeText: "#ffffff",
@@ -590,32 +590,32 @@ function getTheme(style, variant) {
       premium: {
         gradientTop: "#161b24",
         gradientMiddle: "#121821",
-        gradientBottom: "#0b1017",
-        spotlightColor: "rgba(255,255,255,0.22)",
-        spotlightScale: 0.54,
+        gradientBottom: "#0d1118",
+        spotlightColor: "rgba(255,255,255,0.16)",
+        spotlightScale: 0.48,
         cardFill: "rgba(255,255,255,0.045)",
-        cardStroke: "rgba(255,255,255,0.08)",
+        cardStroke: "rgba(255,255,255,0.07)",
         text: "#ffffff",
         titleFont: 'Arial, Helvetica, sans-serif',
         priceFont: 'Arial, Helvetica, sans-serif',
-        oldPriceText: "rgba(255,255,255,0.84)",
-        oldPriceLine: "rgba(255,255,255,0.92)",
-        priceFill: "#f8f6ef",
-        priceText: "#14171f",
+        oldPriceText: "rgba(255,255,255,0.80)",
+        oldPriceLine: "rgba(255,255,255,0.88)",
+        priceFill: "#f7f7f6",
+        priceText: "#171a20",
         badgeStyle: "darkSubtle",
-        badgeFill: "#707887",
-        badgeFill2: "#9da5b1",
+        badgeFill: "#6f7b8e",
+        badgeFill2: "#97a2b2",
         badgeText: "#ffffff",
-        badgeShadow: "rgba(0,0,0,0.28)",
-        badgeHighlight: "rgba(255,255,255,0.14)",
+        badgeShadow: "rgba(0,0,0,0.24)",
+        badgeHighlight: "rgba(255,255,255,0.10)",
         texture: "none"
       },
-      luxegold: {
+      gold: {
         gradientTop: "#12151b",
         gradientMiddle: "#0f1218",
         gradientBottom: "#080a0e",
-        spotlightColor: "rgba(255,244,210,0.24)",
-        spotlightScale: 0.60,
+        spotlightColor: "rgba(255,241,204,0.30)",
+        spotlightScale: 0.62,
         cardFill: "rgba(255,255,255,0.04)",
         cardStroke: "rgba(255,255,255,0.07)",
         text: "#ffffff",
@@ -634,9 +634,9 @@ function getTheme(style, variant) {
         texture: "grainLuxury"
       },
       clinical: {
-        gradientTop: "#0f172a",
-        gradientMiddle: "#111c35",
-        gradientBottom: "#0a1426",
+        gradientTop: "#0b1324",
+        gradientMiddle: "#0e1a33",
+        gradientBottom: "#07101f",
         spotlightColor: "rgba(255,255,255,0.34)",
         spotlightScale: 0.62,
         cardFill: "rgba(255,255,255,0.05)",
@@ -644,8 +644,8 @@ function getTheme(style, variant) {
         text: "#ffffff",
         titleFont: 'Arial, Helvetica, sans-serif',
         priceFont: 'Arial, Helvetica, sans-serif',
-        oldPriceText: "rgba(214,225,241,0.88)",
-        oldPriceLine: "rgba(214,225,241,0.94)",
+        oldPriceText: "rgba(220,232,247,0.88)",
+        oldPriceLine: "rgba(220,232,247,0.94)",
         priceFill: "#f7fbff",
         priceText: "#11213c",
         badgeStyle: "clinical",
@@ -717,7 +717,12 @@ function drawComposition({ name, price, oldPrice, badge }) {
   }
 
   if (selectedStyle === "dark") {
-    drawAmbientGlow(layout.productX, layout.productY, layout.productW, layout.productH, "rgba(255,255,255,0.13)");
+    const glowColor = selectedVariant === "gold"
+      ? "rgba(255,244,210,0.18)"
+      : selectedVariant === "clinical"
+        ? "rgba(255,255,255,0.13)"
+        : "rgba(255,255,255,0.10)";
+    drawAmbientGlow(layout.productX, layout.productY, layout.productW, layout.productH, glowColor);
   }
 
   drawProductShadow(layout.productX, layout.productY, layout.productW, layout.productH);
@@ -755,10 +760,10 @@ function drawTexture(width, height, theme) {
 
   ctx.save();
 
-  if (theme.texture === "microdotsBlue") {
-    ctx.fillStyle = "rgba(80,120,180,0.06)";
-    const step = Math.max(24, Math.floor(width / 36));
-    const radius = Math.max(1.3, width * 0.0016);
+  if (theme.texture === "clinicalDots") {
+    const step = Math.max(22, Math.floor(width / 34));
+    const radius = Math.max(1.4, width * 0.0017);
+    ctx.fillStyle = "rgba(63, 106, 163, 0.07)";
     for (let y = step; y < height; y += step) {
       for (let x = step; x < width; x += step) {
         ctx.beginPath();
@@ -789,17 +794,17 @@ function drawTexture(width, height, theme) {
   }
 
   if (theme.texture === "grainLuxury") {
-    for (let i = 0; i < 1100; i += 1) {
+    for (let i = 0; i < 1300; i += 1) {
       const x = Math.random() * width;
       const y = Math.random() * height;
-      const a = Math.random() * 0.03;
+      const a = Math.random() * 0.034;
       ctx.fillStyle = `rgba(212,175,55,${a})`;
       ctx.fillRect(x, y, 1.2, 1.2);
     }
   }
 
   if (theme.texture === "microgridClinical") {
-    ctx.strokeStyle = "rgba(255,255,255,0.035)";
+    ctx.strokeStyle = "rgba(255,255,255,0.045)";
     ctx.lineWidth = 1;
     const step = Math.max(34, Math.floor(width / 26));
 
@@ -921,6 +926,11 @@ function drawBadge(x, y, w, h, text, theme) {
     return;
   }
 
+  if (theme.badgeStyle === "darkSubtle") {
+    drawDarkSubtleBadge(x, y, w, h, text, theme);
+    return;
+  }
+
   ctx.save();
   ctx.translate(x + w / 2, y + h / 2);
 
@@ -934,8 +944,8 @@ function drawBadge(x, y, w, h, text, theme) {
   ctx.rotate(angle);
 
   ctx.shadowColor = theme.badgeShadow;
-  ctx.shadowBlur = theme.badgeStyle === "boldBig" ? 22 : theme.badgeStyle === "clean3d" ? 14 : 10;
-  ctx.shadowOffsetY = theme.badgeStyle === "boldBig" ? 12 : 8;
+  ctx.shadowBlur = theme.badgeStyle === "boldBig" ? 22 : theme.badgeStyle === "clean3d" ? 14 : 8;
+  ctx.shadowOffsetY = theme.badgeStyle === "boldBig" ? 12 : theme.badgeStyle === "clean3d" ? 8 : 5;
 
   const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
   grad.addColorStop(0, theme.badgeFill2);
@@ -943,7 +953,7 @@ function drawBadge(x, y, w, h, text, theme) {
   ctx.fillStyle = grad;
 
   const radius =
-    theme.badgeStyle === "cleanFlat" ? Math.round(h * 0.42) :
+    theme.badgeStyle === "pharmacyFlat" ? Math.round(h * 0.36) :
     theme.badgeStyle === "boldBig" ? Math.round(h * 0.52) :
     Math.round(h * 0.50);
 
@@ -951,7 +961,7 @@ function drawBadge(x, y, w, h, text, theme) {
 
   ctx.shadowColor = "transparent";
   ctx.fillStyle = theme.badgeHighlight;
-  roundRect(ctx, -w / 2 + 10, -h / 2 + 8, w - 20, h * 0.34, Math.round(h * 0.24), true, false);
+  roundRect(ctx, -w / 2 + 10, -h / 2 + 8, w - 20, h * 0.30, Math.round(h * 0.20), true, false);
 
   ctx.fillStyle = theme.badgeText;
   ctx.textAlign = "center";
@@ -965,7 +975,7 @@ function drawBadge(x, y, w, h, text, theme) {
   const startSize =
     theme.badgeStyle === "boldBig"
       ? Math.floor(h * 0.42)
-      : Math.floor(h * 0.36);
+      : Math.floor(h * 0.35);
 
   fitTextCenterWithFamily(text.toUpperCase(), 0, 4, w - 36, startSize, 20, 900, fontFamily);
 
@@ -1023,6 +1033,33 @@ function drawClinicalBadge(x, y, w, h, text, theme) {
   ctx.strokeStyle = "rgba(170,190,220,0.42)";
   ctx.lineWidth = 2;
   roundRect(ctx, -w / 2 + 2, -h / 2 + 2, w - 4, h - 4, Math.round(h * 0.26), false, true);
+
+  ctx.fillStyle = theme.badgeText;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  fitTextCenterWithFamily(text.toUpperCase(), 0, 2, w - 40, Math.floor(h * 0.33), 20, 900, 'Arial, Helvetica, sans-serif');
+
+  ctx.restore();
+}
+
+function drawDarkSubtleBadge(x, y, w, h, text, theme) {
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+
+  ctx.shadowColor = theme.badgeShadow;
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 6;
+
+  const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+  grad.addColorStop(0, theme.badgeFill2);
+  grad.addColorStop(1, theme.badgeFill);
+  ctx.fillStyle = grad;
+  roundRect(ctx, -w / 2, -h / 2, w, h, Math.round(h * 0.34), true, false);
+
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, -w / 2 + 2, -h / 2 + 2, w - 4, h - 4, Math.round(h * 0.32), false, true);
 
   ctx.fillStyle = theme.badgeText;
   ctx.textAlign = "center";
