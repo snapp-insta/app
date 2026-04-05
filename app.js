@@ -17,6 +17,7 @@ const removeBgBtn = document.getElementById("removeBgBtn");
 const previewMeta = document.getElementById("previewMeta");
 const statusMsg = document.getElementById("statusMsg");
 const nameCount = document.getElementById("nameCount");
+const removeBgNote = document.getElementById("removeBgNote");
 
 const imageThumbWrap = document.getElementById("imageThumbWrap");
 const imageThumb = document.getElementById("imageThumb");
@@ -34,15 +35,16 @@ let originalProductFile = null;
 let productObjectUrl = null;
 let logoObjectUrl = null;
 let processedProductUrl = null;
-let bgRemoveReady = false;
 let bgRemoveFn = null;
-let bgRemoveLoading = null;
+let bgReady = false;
 
 const formatMap = {
   square: { width: 1080, height: 1080, label: "Square 1:1 — 1080×1080" },
   portrait: { width: 1080, height: 1350, label: "Portrait 3:4 — 1080×1350" },
   story: { width: 1080, height: 1920, label: "Story 9:16 — 1080×1920" }
 };
+
+initBackgroundRemoval();
 
 productNameInput.addEventListener("input", () => {
   nameCount.textContent = productNameInput.value.length;
@@ -83,7 +85,31 @@ downloadBtn.addEventListener("click", downloadVisual);
 resetBtn.addEventListener("click", resetApp);
 removeBgBtn.addEventListener("click", removeBackgroundFromProduct);
 
-initBackgroundRemoval();
+function updateRemoveBgUi() {
+  removeBgBtn.disabled = !(bgReady && originalProductFile);
+
+  if (!bgReady) {
+    removeBgNote.textContent = "Background removal se učitava… ako potraje, osveži stranicu i sačekaj par sekundi.";
+  } else if (!originalProductFile) {
+    removeBgNote.textContent = "Prvo učitaj sliku proizvoda.";
+  } else {
+    removeBgNote.textContent = "Klikni na Remove background. Prvi put obrada može trajati malo duže.";
+  }
+}
+
+async function initBackgroundRemoval() {
+  try {
+    const mod = await import("https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm");
+    bgRemoveFn = mod.removeBackground;
+    bgReady = typeof bgRemoveFn === "function";
+  } catch (err) {
+    console.error("Background removal import error:", err);
+    bgReady = false;
+    bgRemoveFn = null;
+  } finally {
+    updateRemoveBgUi();
+  }
+}
 
 function updateSegmentedState(container, type, value) {
   const attr = type === "style" ? "data-style" : "data-format";
@@ -102,32 +128,6 @@ function createObjectUrl(fileOrBlob) {
   return URL.createObjectURL(fileOrBlob);
 }
 
-function refreshRemoveBgButtonState() {
-  removeBgBtn.disabled = !(originalProductFile && bgRemoveReady);
-}
-
-function setStatus(text) {
-  statusMsg.textContent = text;
-}
-
-async function initBackgroundRemoval() {
-  try {
-    setStatus("Učitavam remove background modul...");
-    bgRemoveLoading = import("https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm");
-    const mod = await bgRemoveLoading;
-    bgRemoveFn = mod.removeBackground;
-    bgRemoveReady = typeof bgRemoveFn === "function";
-    refreshRemoveBgButtonState();
-    setStatus("Upload slike i unesi naziv i cenu za generisanje.");
-  } catch (error) {
-    console.error("Background removal init failed:", error);
-    bgRemoveReady = false;
-    bgRemoveFn = null;
-    refreshRemoveBgButtonState();
-    setStatus("Remove background modul nije učitan. Ostatak aplikacije radi normalno.");
-  }
-}
-
 function handleImageUpload(event, kind) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -144,21 +144,21 @@ function handleImageUpload(event, kind) {
       productImage = img;
       imageThumb.src = objectUrl;
       imageThumbWrap.classList.remove("hidden");
-      refreshRemoveBgButtonState();
-      setStatus("Slika proizvoda učitana.");
+      statusMsg.textContent = "Slika proizvoda učitana.";
+      updateRemoveBgUi();
     } else {
       revokeIfNeeded(logoObjectUrl);
       logoObjectUrl = objectUrl;
       logoImage = img;
       logoThumb.src = objectUrl;
       logoThumbWrap.classList.remove("hidden");
-      setStatus("Logo učitan.");
+      statusMsg.textContent = "Logo učitan.";
     }
   };
 
   img.onerror = () => {
     revokeIfNeeded(objectUrl);
-    setStatus("Greška pri učitavanju slike.");
+    statusMsg.textContent = "Greška pri učitavanju slike.";
   };
 
   img.src = objectUrl;
@@ -189,12 +189,12 @@ function getBadgeText() {
 
 async function removeBackgroundFromProduct() {
   if (!originalProductFile) {
-    setStatus("Prvo učitaj sliku proizvoda.");
+    statusMsg.textContent = "Prvo učitaj sliku proizvoda.";
     return;
   }
 
-  if (!bgRemoveReady || !bgRemoveFn) {
-    setStatus("Remove background još nije spreman.");
+  if (!bgReady || !bgRemoveFn) {
+    statusMsg.textContent = "Remove background trenutno nije spreman. Osveži stranicu i pokušaj ponovo.";
     return;
   }
 
@@ -202,11 +202,9 @@ async function removeBackgroundFromProduct() {
     removeBgBtn.disabled = true;
     removeBgBtn.classList.add("loading");
     removeBgBtn.textContent = "Obrada...";
-    setStatus("Uklanjam pozadinu... prvi put može potrajati duže.");
+    statusMsg.textContent = "Uklanjam pozadinu... prvi put može trajati malo duže.";
 
-    const resultBlob = await bgRemoveFn(originalProductFile, {
-      publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/dist/"
-    });
+    const resultBlob = await bgRemoveFn(originalProductFile);
 
     revokeIfNeeded(processedProductUrl);
     processedProductUrl = createObjectUrl(resultBlob);
@@ -216,14 +214,14 @@ async function removeBackgroundFromProduct() {
     productImage = processedImage;
     imageThumb.src = processedProductUrl;
     imageThumbWrap.classList.remove("hidden");
-    setStatus("Pozadina je uklonjena. Sada generiši vizual.");
+    statusMsg.textContent = "Pozadina je uklonjena. Sada generiši vizual.";
   } catch (error) {
-    console.error("Remove background failed:", error);
-    setStatus("Remove background nije uspeo za ovu sliku. Probaj drugu sliku sa jasnijim proizvodom.");
+    console.error("Remove background error:", error);
+    statusMsg.textContent = "Remove background nije uspeo za ovu sliku. Probaj drugu sliku sa jasnijim proizvodom.";
   } finally {
-    refreshRemoveBgButtonState();
     removeBgBtn.classList.remove("loading");
     removeBgBtn.textContent = "Remove background";
+    updateRemoveBgUi();
   }
 }
 
@@ -234,12 +232,12 @@ function generateVisual() {
   const badge = getBadgeText();
 
   if (!productImage) {
-    setStatus("Dodaj sliku proizvoda.");
+    statusMsg.textContent = "Dodaj sliku proizvoda.";
     return;
   }
 
   if (!name || !rawPrice) {
-    setStatus("Naziv i nova cena su obavezni.");
+    statusMsg.textContent = "Naziv i nova cena su obavezni.";
     return;
   }
 
@@ -254,7 +252,7 @@ function generateVisual() {
     badge
   });
 
-  setStatus("Vizual generisan.");
+  statusMsg.textContent = "Vizual generisan.";
   downloadBtn.disabled = false;
 }
 
@@ -303,14 +301,14 @@ function resetApp() {
   updateSegmentedState(formatSelector, "format", selectedFormat);
 
   nameCount.textContent = "0";
-  refreshRemoveBgButtonState();
   removeBgBtn.classList.remove("loading");
   removeBgBtn.textContent = "Remove background";
+  updateRemoveBgUi();
 
   applyCanvasSize();
   drawPlaceholder();
   downloadBtn.disabled = true;
-  setStatus("Upload slike i unesi naziv i cenu za generisanje.");
+  statusMsg.textContent = "Upload slike i unesi naziv i cenu za generisanje.";
 }
 
 function sanitizeText(value) {
@@ -345,6 +343,88 @@ function splitPriceAndCurrency(priceText) {
     amount: match[1].trim(),
     currency: match[2].toUpperCase()
   };
+}
+
+function getTheme(style) {
+  if (style === "bold") {
+    return {
+      gradientTop: "#ff3d54",
+      gradientMiddle: "#ff6a3d",
+      gradientBottom: "#ff9a00",
+      spotlightColor: "rgba(255,255,255,0.24)",
+      spotlightScale: 0.52,
+      cardFill: "rgba(255,255,255,0.10)",
+      cardStroke: "rgba(255,255,255,0)",
+      text: "#ffffff",
+      muted: "rgba(255,255,255,0.84)",
+      titleFont: '"Poppins", Arial, Helvetica, sans-serif',
+      priceFont: '"Poppins", Arial, Helvetica, sans-serif',
+      oldPriceText: "rgba(255,255,255,0.94)",
+      oldPriceLine: "#ffffff",
+      priceFill: "#fff6f8",
+      priceText: "#d90452",
+      badgeStyle: "bold",
+      badgeFill: "#f8ea24",
+      badgeFill2: "#ffe948",
+      badgeText: "#121212",
+      badgeShadow: "rgba(0,0,0,0.20)",
+      badgeHighlight: "rgba(255,255,255,0.24)"
+    };
+  }
+
+  if (style === "dark") {
+    return {
+      gradientTop: "#161b24",
+      gradientMiddle: "#121821",
+      gradientBottom: "#0b1017",
+      spotlightColor: "rgba(255,255,255,0.34)",
+      spotlightScale: 0.62,
+      cardFill: "rgba(255,255,255,0.045)",
+      cardStroke: "rgba(255,255,255,0.08)",
+      text: "#ffffff",
+      muted: "rgba(255,255,255,0.76)",
+      titleFont: 'Arial, Helvetica, sans-serif',
+      priceFont: 'Arial, Helvetica, sans-serif',
+      oldPriceText: "rgba(255,255,255,0.84)",
+      oldPriceLine: "rgba(255,255,255,0.92)",
+      priceFill: "#f8f6ef",
+      priceText: "#14171f",
+      badgeStyle: "dark",
+      badgeFill: "#d8b46a",
+      badgeFill2: "#f3dfab",
+      badgeText: "#2e2412",
+      badgeShadow: "rgba(0,0,0,0.28)",
+      badgeHighlight: "rgba(255,255,255,0.28)"
+    };
+  }
+
+  return {
+    gradientTop: "#ffffff",
+    gradientMiddle: "#f6f9ff",
+    gradientBottom: "#eef4ff",
+    spotlightColor: "rgba(124,108,242,0.10)",
+    spotlightScale: 0.42,
+    cardFill: "rgba(255,255,255,0.82)",
+    cardStroke: "rgba(255,255,255,0.78)",
+    text: "#111827",
+    muted: "#5f6b7a",
+    titleFont: 'Arial, Helvetica, sans-serif',
+    priceFont: 'Arial, Helvetica, sans-serif',
+    oldPriceText: "#606a78",
+    oldPriceLine: "#9da6b2",
+    priceFill: "#ffffff",
+    priceText: "#ef4444",
+    badgeStyle: "clean",
+    badgeFill: "#ef4444",
+    badgeFill2: "#ff6a5c",
+    badgeText: "#ffffff",
+    badgeShadow: "rgba(167, 24, 24, 0.28)",
+    badgeHighlight: "rgba(255,255,255,0.22)"
+  };
+}
+
+function setCanvasFont(weight, size, family) {
+  ctx.font = `${weight} ${size}px ${family}`;
 }
 
 function drawPlaceholder() {
@@ -392,7 +472,11 @@ function drawComposition({ name, price, oldPrice, badge }) {
   }
 
   if (selectedStyle === "bold") {
-    drawAmbientGlow(layout.productX, layout.productY, layout.productW, layout.productH);
+    drawAmbientGlow(layout.productX, layout.productY, layout.productW, layout.productH, "rgba(255,255,255,0.18)");
+  }
+
+  if (selectedStyle === "dark") {
+    drawAmbientGlow(layout.productX, layout.productY, layout.productW, layout.productH, "rgba(255,255,255,0.13)");
   }
 
   drawProductShadow(layout.productX, layout.productY, layout.productW, layout.productH);
@@ -400,57 +484,6 @@ function drawComposition({ name, price, oldPrice, badge }) {
 
   drawProductName(name, layout.textX, layout.nameY, layout.textW, theme);
   drawPriceGroup(price, oldPrice, layout, theme);
-}
-
-function getTheme(style) {
-  if (style === "bold") {
-    return {
-      gradientTop: "#ff3d54",
-      gradientMiddle: "#ff6a3d",
-      gradientBottom: "#ff9a00",
-      cardFill: "rgba(255,255,255,0.10)",
-      text: "#ffffff",
-      muted: "rgba(255,255,255,0.84)",
-      priceFill: "#fff6f8",
-      priceText: "#d90452",
-      oldPriceText: "rgba(255,255,255,0.92)",
-      oldPriceLine: "#ffffff",
-      badgeFill: "#f8ea24",
-      badgeText: "#121212"
-    };
-  }
-
-  if (style === "dark") {
-    return {
-      gradientTop: "#171c28",
-      gradientMiddle: "#121827",
-      gradientBottom: "#0d1018",
-      cardFill: "rgba(255,255,255,0.05)",
-      text: "#ffffff",
-      muted: "rgba(255,255,255,0.72)",
-      priceFill: "#ffffff",
-      priceText: "#111827",
-      oldPriceText: "rgba(255,255,255,0.86)",
-      oldPriceLine: "rgba(255,255,255,0.95)",
-      badgeFill: "#7c6cf2",
-      badgeText: "#ffffff"
-    };
-  }
-
-  return {
-    gradientTop: "#ffffff",
-    gradientMiddle: "#f5f8ff",
-    gradientBottom: "#eef4ff",
-    cardFill: "rgba(255,255,255,0.76)",
-    text: "#141b29",
-    muted: "#5d6778",
-    priceFill: "#ffffff",
-    priceText: "#ef4444",
-    oldPriceText: "#4b5563",
-    oldPriceLine: "#6b7280",
-    badgeFill: "#141b29",
-    badgeText: "#ffffff"
-  };
 }
 
 function drawBackground(width, height, theme) {
@@ -463,23 +496,14 @@ function drawBackground(width, height, theme) {
 
   const spotlight = ctx.createRadialGradient(
     width / 2,
-    height * 0.25,
+    height * 0.28,
     10,
     width / 2,
-    height * 0.25,
-    width * 0.52
+    height * 0.28,
+    width * theme.spotlightScale
   );
-
-  if (selectedStyle === "bold") {
-    spotlight.addColorStop(0, "rgba(255,255,255,0.23)");
-    spotlight.addColorStop(1, "rgba(255,255,255,0)");
-  } else if (selectedStyle === "dark") {
-    spotlight.addColorStop(0, "rgba(124,108,242,0.22)");
-    spotlight.addColorStop(1, "rgba(124,108,242,0)");
-  } else {
-    spotlight.addColorStop(0, "rgba(124,108,242,0.14)");
-    spotlight.addColorStop(1, "rgba(124,108,242,0)");
-  }
+  spotlight.addColorStop(0, theme.spotlightColor);
+  spotlight.addColorStop(1, "rgba(255,255,255,0)");
 
   ctx.fillStyle = spotlight;
   ctx.fillRect(0, 0, width, height);
@@ -495,8 +519,8 @@ function drawCard(width, height, theme) {
   ctx.fillStyle = theme.cardFill;
   roundRect(ctx, cardX, cardY, cardW, cardH, Math.round(width * 0.04), true, false);
 
-  if (selectedStyle === "clean") {
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  if (theme.cardStroke && theme.cardStroke !== "rgba(255,255,255,0)") {
+    ctx.strokeStyle = theme.cardStroke;
     ctx.lineWidth = 2;
     roundRect(ctx, cardX, cardY, cardW, cardH, Math.round(width * 0.04), false, true);
   }
@@ -575,25 +599,69 @@ function getLayout(width, height) {
 }
 
 function drawBadge(x, y, w, h, text, theme) {
+  if (theme.badgeStyle === "dark") {
+    drawPremiumBadge(x, y, w, h, text, theme);
+    return;
+  }
+
   ctx.save();
   ctx.translate(x + w / 2, y + h / 2);
-  ctx.rotate((-3 * Math.PI) / 180);
 
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
-  ctx.shadowBlur = 18;
-  ctx.shadowOffsetY = 10;
+  const angle = theme.badgeStyle === "bold" ? (-3 * Math.PI) / 180 : (-2 * Math.PI) / 180;
+  ctx.rotate(angle);
 
-  ctx.fillStyle = theme.badgeFill;
+  ctx.shadowColor = theme.badgeShadow;
+  ctx.shadowBlur = theme.badgeStyle === "clean" ? 14 : 18;
+  ctx.shadowOffsetY = theme.badgeStyle === "clean" ? 8 : 10;
+
+  const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+  grad.addColorStop(0, theme.badgeFill2);
+  grad.addColorStop(1, theme.badgeFill);
+  ctx.fillStyle = grad;
   roundRect(ctx, -w / 2, -h / 2, w, h, h / 2, true, false);
 
   ctx.shadowColor = "transparent";
-  ctx.fillStyle = "rgba(255,255,255,0.22)";
-  roundRect(ctx, -w / 2 + 10, -h / 2 + 10, w - 20, h * 0.38, h / 3, true, false);
+  ctx.fillStyle = theme.badgeHighlight;
+  roundRect(ctx, -w / 2 + 10, -h / 2 + 8, w - 20, h * 0.34, h / 3, true, false);
 
   ctx.fillStyle = theme.badgeText;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  fitTextCenter(text.toUpperCase(), 0, 4, w - 40, Math.floor(h * 0.38), 22, 900);
+  const startSize = theme.badgeStyle === "clean" ? Math.floor(h * 0.34) : Math.floor(h * 0.38);
+  const fontFamily = theme.badgeStyle === "bold" ? '"Poppins", Arial, Helvetica, sans-serif' : 'Arial, Helvetica, sans-serif';
+  fitTextCenterWithFamily(text.toUpperCase(), 0, 4, w - 40, startSize, 20, 900, fontFamily);
+
+  ctx.restore();
+}
+
+function drawPremiumBadge(x, y, w, h, text, theme) {
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+
+  ctx.shadowColor = theme.badgeShadow;
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 12;
+
+  const grad = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  grad.addColorStop(0, "#f7e7b8");
+  grad.addColorStop(0.45, theme.badgeFill2);
+  grad.addColorStop(1, theme.badgeFill);
+  ctx.fillStyle = grad;
+
+  roundRect(ctx, -w / 2, -h / 2, w, h, Math.round(h * 0.32), true, false);
+
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(255,255,255,0.38)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, -w / 2 + 2, -h / 2 + 2, w - 4, h - 4, Math.round(h * 0.30), false, true);
+
+  ctx.fillStyle = theme.badgeHighlight;
+  roundRect(ctx, -w / 2 + 12, -h / 2 + 10, w - 24, h * 0.28, Math.round(h * 0.18), true, false);
+
+  ctx.fillStyle = theme.badgeText;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  fitTextCenterWithFamily(text.toUpperCase(), 0, 2, w - 40, Math.floor(h * 0.34), 20, 900, 'Arial, Helvetica, sans-serif');
 
   ctx.restore();
 }
@@ -605,19 +673,19 @@ function drawLogo(img, x, y, w, h) {
   ctx.restore();
 }
 
-function drawAmbientGlow(x, y, w, h) {
+function drawAmbientGlow(x, y, w, h, color) {
   const glow = ctx.createRadialGradient(
     x + w / 2,
     y + h / 2,
-    w * 0.12,
+    w * 0.10,
     x + w / 2,
     y + h / 2,
-    w * 0.65
+    w * 0.66
   );
-  glow.addColorStop(0, "rgba(255,255,255,0.18)");
+  glow.addColorStop(0, color);
   glow.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = glow;
-  ctx.fillRect(x - 80, y - 80, w + 160, h + 160);
+  ctx.fillRect(x - 90, y - 90, w + 180, h + 180);
 }
 
 function drawProductShadow(x, y, w, h) {
@@ -666,11 +734,11 @@ function drawProductName(text, x, y, maxWidth, theme) {
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 
-  const fontSize = selectedFormat === "story" ? 62 : selectedFormat === "portrait" ? 56 : 44;
+  const startSize = selectedFormat === "story" ? 62 : selectedFormat === "portrait" ? 56 : 44;
   const minSize = 28;
-  const lines = wrapTextAdaptive(text, maxWidth, fontSize, minSize, 2, 900);
+  const lines = wrapTextAdaptiveWithFamily(text, maxWidth, startSize, minSize, 2, 900, theme.titleFont);
 
-  ctx.font = `900 ${lines.fontSize}px Arial`;
+  setCanvasFont(900, lines.fontSize, theme.titleFont);
   const lineHeight = Math.round(lines.fontSize * 1.08);
   lines.lines.forEach((line, index) => {
     ctx.fillText(line, x, y + index * lineHeight);
@@ -692,18 +760,18 @@ function drawPriceGroup(price, oldPrice, layout, theme) {
       selectedFormat === "story" ? 64 :
       selectedFormat === "portrait" ? 52 : 44;
 
-    const oldPriceY = y - 22;
-
-    ctx.font = `800 ${fontSize}px Arial`;
+    setCanvasFont(800, fontSize, theme.priceFont);
     ctx.fillStyle = theme.oldPriceText;
-    ctx.fillText(oldPrice, centerX, oldPriceY);
+
+    const oldY = y - (selectedFormat === "story" ? 46 : selectedFormat === "portrait" ? 36 : 30);
+    ctx.fillText(oldPrice, centerX, oldY);
 
     const oldWidth = ctx.measureText(oldPrice).width;
     ctx.strokeStyle = theme.oldPriceLine;
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.moveTo(centerX - oldWidth / 2, oldPriceY - fontSize / 3);
-    ctx.lineTo(centerX + oldWidth / 2, oldPriceY - fontSize / 3);
+    ctx.moveTo(centerX - oldWidth / 2, oldY - fontSize * 0.32);
+    ctx.lineTo(centerX + oldWidth / 2, oldY - fontSize * 0.32);
     ctx.stroke();
   }
 
@@ -716,7 +784,7 @@ function drawPriceGroup(price, oldPrice, layout, theme) {
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = 0.28;
+  ctx.globalAlpha = selectedStyle === "dark" ? 0.18 : 0.28;
   ctx.fillStyle = "#ffffff";
   roundRect(ctx, x + 20, y + 14, w - 40, Math.round(h * 0.32), Math.round(h * 0.18), true, false);
   ctx.restore();
@@ -733,14 +801,15 @@ function drawPriceGroup(price, oldPrice, layout, theme) {
   const centerX = x + w / 2;
 
   if (!currency) {
-    fitTextCenter(
+    fitTextCenterWithFamily(
       amount,
       centerX,
       centerY,
       w - 60,
       selectedFormat === "story" ? 118 : selectedFormat === "portrait" ? 104 : 82,
       34,
-      900
+      900,
+      theme.priceFont
     );
     return;
   }
@@ -749,10 +818,10 @@ function drawPriceGroup(price, oldPrice, layout, theme) {
   let currencySize = Math.round(amountSize * 0.38);
 
   while (amountSize > 34) {
-    ctx.font = `900 ${amountSize}px Arial`;
+    setCanvasFont(900, amountSize, theme.priceFont);
     const amountWidth = ctx.measureText(amount).width;
 
-    ctx.font = `900 ${currencySize}px Arial`;
+    setCanvasFont(900, currencySize, theme.priceFont);
     const currencyWidth = ctx.measureText(currency).width;
 
     const totalWidth = amountWidth + 18 + currencyWidth;
@@ -762,40 +831,40 @@ function drawPriceGroup(price, oldPrice, layout, theme) {
     currencySize = Math.round(amountSize * 0.38);
   }
 
-  ctx.font = `900 ${amountSize}px Arial`;
+  setCanvasFont(900, amountSize, theme.priceFont);
   const amountWidth = ctx.measureText(amount).width;
 
-  ctx.font = `900 ${currencySize}px Arial`;
+  setCanvasFont(900, currencySize, theme.priceFont);
   const currencyWidth = ctx.measureText(currency).width;
 
   const totalWidth = amountWidth + 18 + currencyWidth;
   let startX = centerX - totalWidth / 2;
 
   ctx.textAlign = "left";
-  ctx.font = `900 ${amountSize}px Arial`;
+  setCanvasFont(900, amountSize, theme.priceFont);
   ctx.fillText(amount, startX, centerY + 4);
 
   startX += amountWidth + 18;
-  ctx.font = `900 ${currencySize}px Arial`;
+  setCanvasFont(900, currencySize, theme.priceFont);
   ctx.fillText(currency, startX, centerY + 10);
 }
 
-function fitTextCenter(text, centerX, centerY, maxWidth, startSize, minSize, weight) {
+function fitTextCenterWithFamily(text, centerX, centerY, maxWidth, startSize, minSize, weight, family) {
   let size = startSize;
   while (size > minSize) {
-    ctx.font = `${weight} ${size}px Arial`;
+    setCanvasFont(weight, size, family);
     if (ctx.measureText(text).width <= maxWidth) break;
     size -= 2;
   }
-  ctx.font = `${weight} ${size}px Arial`;
+  setCanvasFont(weight, size, family);
   ctx.fillText(text, centerX, centerY);
 }
 
-function wrapTextAdaptive(text, maxWidth, startSize, minSize, maxLines, weight) {
+function wrapTextAdaptiveWithFamily(text, maxWidth, startSize, minSize, maxLines, weight, family) {
   let fontSize = startSize;
 
   while (fontSize >= minSize) {
-    ctx.font = `${weight} ${fontSize}px Arial`;
+    setCanvasFont(weight, fontSize, family);
     const lines = wrapText(text, maxWidth);
     if (lines.length <= maxLines) {
       return { lines, fontSize };
@@ -803,7 +872,7 @@ function wrapTextAdaptive(text, maxWidth, startSize, minSize, maxLines, weight) 
     fontSize -= 2;
   }
 
-  ctx.font = `${weight} ${minSize}px Arial`;
+  setCanvasFont(weight, minSize, family);
   let lines = wrapText(text, maxWidth);
   if (lines.length > maxLines) {
     lines = lines.slice(0, maxLines);
@@ -860,3 +929,4 @@ function roundRect(ctxRef, x, y, width, height, radius, fill, stroke) {
 
 applyCanvasSize();
 drawPlaceholder();
+updateRemoveBgUi();
